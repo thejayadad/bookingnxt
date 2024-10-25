@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("POSTGRES_PRISMA_URL") // uses connection pooling
+  directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  trainings Training[]  // Relation to Training model
+  reviews   Review[]    // Relation to Review model
+  bookings  Booking[]   // Relation to Booking model
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// Training model
+model Training {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  location    String
+  image       String
+  availability String // Store availability as a string
+  capacity    Int
+  full        Boolean  @default(false)
+
+  userEmail   String   // Relation field
+  user        User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
+
+  reviews     Review[] // Relation to Review model
+  bookings    Booking[] // Relation to Booking model
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Review model
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // Rating (1-5)
+  content   String   // Review content
+  userEmail String    // Relation field
+  trainingId String   // Relation field
+  
+  user      User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
+  training  Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// New Booking model
+model Booking {
+  id          String   @id @default(cuid())
+  userEmail   String   // Relation field
+  trainingId  String   // Relation field
+  startTime   DateTime // Start date and time for the training session
+  endTime     DateTime // End date and time for the training session
+
+  user        User     @relation(fields: [userEmail], references: [email], onDelete: Cascade)
+  training    Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
